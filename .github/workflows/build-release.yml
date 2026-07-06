@@ -101,14 +101,7 @@ jobs:
             tail -n 160 ctest.log || true
           } > ci-test-diagnostics.log
 
-          message="$(python3 - <<'PY'
-from pathlib import Path
-
-data = Path("ci-test-diagnostics.log").read_text(errors="replace")[-7000:]
-data = data.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-print(data)
-PY
-)"
+          message="$(python3 -c 'from pathlib import Path; data = Path("ci-test-diagnostics.log").read_text(errors="replace")[-7000:]; print(data.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))')"
           echo "::error title=Opusora smoke tests failed::$message"
           exit "$status"
 
