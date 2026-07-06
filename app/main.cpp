@@ -316,10 +316,11 @@ int main(int argc, char* argv[])
         });
     } else if (arguments.size() > 2 && arguments.at(1) == QStringLiteral("--ui-screenshot")) {
         const QString screenshotPath = QDir::cleanPath(arguments.at(2));
+        const QString popupObjectName = arguments.size() > 4 ? arguments.at(4) : QString();
         if (arguments.size() > 3 && !engine.rootObjects().isEmpty()) {
             engine.rootObjects().first()->setProperty("currentPage", arguments.at(3));
         }
-        QTimer::singleShot(500, &engine, [&engine, screenshotPath]() {
+        QTimer::singleShot(500, &engine, [&engine, screenshotPath, popupObjectName]() {
             auto* window = engine.rootObjects().isEmpty()
                 ? nullptr
                 : qobject_cast<QQuickWindow*>(engine.rootObjects().first());
@@ -328,6 +329,17 @@ int main(int argc, char* argv[])
                 QCoreApplication::exit(1);
                 return;
             }
+
+            if (!popupObjectName.isEmpty()) {
+                QObject* popupTarget = window->findChild<QObject*>(popupObjectName);
+                if (!popupTarget || !QMetaObject::invokeMethod(popupTarget, "openPopup")) {
+                    qWarning() << "UI screenshot failed: could not open popup" << popupObjectName;
+                    QCoreApplication::exit(1);
+                    return;
+                }
+                QCoreApplication::processEvents();
+            }
+
             const auto result = window->contentItem()->grabToImage();
             if (result.isNull()) {
                 qWarning() << "UI screenshot failed: could not start item grab";

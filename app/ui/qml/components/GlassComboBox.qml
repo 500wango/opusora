@@ -2,58 +2,135 @@ import QtQuick
 import QtQuick.Controls
 import Opusora
 
-ComboBox {
+Control {
     id: root
+
+    property var model: []
+    property string textRole: ""
+    property string valueRole: ""
+    property int currentIndex: -1
+    readonly property string displayText: optionText(currentIndex)
+    readonly property var currentValue: optionValue(currentIndex)
+    property int highlightedIndex: currentIndex
+    property bool pressed: triggerMouse.pressed || popup.visible
+
+    signal activated(int index)
 
     implicitHeight: 36
     implicitWidth: 180
     leftPadding: 14
     rightPadding: 34
+    hoverEnabled: true
+    focusPolicy: Qt.StrongFocus
     font.pixelSize: 13
 
-    delegate: ItemDelegate {
-        id: itemDelegate
-
-        required property int index
-        property string optionText: {
-            if (typeof modelData === "object" && root.textRole.length > 0) {
-                return modelData[root.textRole]
-            }
-            return modelData
+    function optionCount() {
+        if (!model) {
+            return 0
         }
-
-        width: root.width
-        height: 36
-        leftPadding: 12
-        rightPadding: 12
-        text: optionText
-        highlighted: root.highlightedIndex === index
-
-        background: Rectangle {
-            radius: 8
-            color: itemDelegate.highlighted
-                ? Theme.accentSoft
-                : (itemDelegate.hovered
-                    ? Theme.popupItemHover
-                    : (itemDelegate.index === root.currentIndex ? Theme.popupItemFill : "transparent"))
+        if (model.length !== undefined) {
+            return model.length
         }
-
-        contentItem: Text {
-            text: itemDelegate.text
-            color: Theme.textPrimary
-            font.pixelSize: root.font.pixelSize
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
+        if (model.count !== undefined) {
+            return model.count
         }
+        return 0
     }
 
-    indicator: Text {
-        x: root.width - width - 13
-        y: Math.round((root.height - height) / 2)
-        text: "⌄"
-        color: Theme.textSecondary
-        font.pixelSize: 15
-        font.weight: Font.DemiBold
+    function optionAt(index) {
+        if (!model || index < 0 || index >= optionCount()) {
+            return undefined
+        }
+        if (model.get && typeof model.get === "function") {
+            return model.get(index)
+        }
+        return model[index]
+    }
+
+    function roleValue(option, role) {
+        if (option === undefined || option === null) {
+            return ""
+        }
+        if (role.length > 0 && typeof option === "object") {
+            const value = option[role]
+            return value === undefined || value === null ? "" : value
+        }
+        return option
+    }
+
+    function optionText(index) {
+        return String(roleValue(optionAt(index), textRole))
+    }
+
+    function optionValue(index) {
+        return roleValue(optionAt(index), valueRole)
+    }
+
+    function updatePopupGeometry() {
+        const overlay = Overlay.overlay
+        if (!overlay) {
+            popup.x = 0
+            popup.y = height + 6
+            popup.width = width
+            return
+        }
+
+        const popupPosition = mapToItem(overlay, 0, height + 6)
+        popup.x = popupPosition.x
+        popup.y = popupPosition.y
+        popup.width = width
+    }
+
+    function openPopup() {
+        if (optionCount() <= 0) {
+            return
+        }
+
+        forceActiveFocus()
+        highlightedIndex = currentIndex >= 0 ? currentIndex : 0
+        updatePopupGeometry()
+        popup.open()
+    }
+
+    function activateOption(index) {
+        if (index < 0 || index >= optionCount()) {
+            return
+        }
+
+        currentIndex = index
+        highlightedIndex = index
+        popup.close()
+        activated(index)
+    }
+
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            if (popup.visible) {
+                activateOption(highlightedIndex)
+            } else {
+                openPopup()
+            }
+            event.accepted = true
+        } else if (event.key === Qt.Key_Escape && popup.visible) {
+            popup.close()
+            event.accepted = true
+        } else if (event.key === Qt.Key_Down) {
+            if (!popup.visible) {
+                openPopup()
+            } else {
+                highlightedIndex = Math.min(optionCount() - 1, highlightedIndex + 1)
+                optionsView.positionViewAtIndex(highlightedIndex, ListView.Contain)
+            }
+            event.accepted = true
+        } else if (event.key === Qt.Key_Up) {
+            if (!popup.visible) {
+                openPopup()
+            } else {
+                highlightedIndex = Math.max(0, highlightedIndex - 1)
+                optionsView.positionViewAtIndex(highlightedIndex, ListView.Contain)
+            }
+            event.accepted = true
+        }
     }
 
     contentItem: Item {
@@ -63,21 +140,33 @@ ComboBox {
         Text {
             id: displayLabel
             anchors.left: parent.left
-            anchors.leftMargin: 14
-            anchors.right: parent.right
-            anchors.rightMargin: 34
+            anchors.leftMargin: root.leftPadding
+            anchors.right: chevron.left
+            anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
             text: root.displayText
             color: root.enabled ? Theme.textPrimary : Theme.textSecondary
             opacity: root.enabled ? 1.0 : 0.62
-            font.pixelSize: 13
+            font.pixelSize: root.font.pixelSize
             elide: Text.ElideRight
+            verticalAlignment: Text.AlignVCenter
+        }
+
+        Text {
+            id: chevron
+            anchors.right: parent.right
+            anchors.rightMargin: 13
+            anchors.verticalCenter: parent.verticalCenter
+            text: "⌄"
+            color: Theme.textSecondary
+            font.pixelSize: 15
+            font.weight: Font.DemiBold
         }
     }
 
     background: Rectangle {
         radius: height / 2
-        color: root.down || root.hovered ? Theme.controlHover : Theme.controlFill
+        color: root.pressed || root.hovered ? Theme.controlHover : Theme.controlFill
         border.color: root.activeFocus ? Theme.accent : Theme.glassBorder
         border.width: 1
 
@@ -93,12 +182,29 @@ ComboBox {
         }
     }
 
-    popup: Popup {
-        y: root.height + 6
-        z: 1000
-        width: root.width
-        implicitHeight: Math.min(contentItem.implicitHeight + topPadding + bottomPadding, 268)
+    MouseArea {
+        id: triggerMouse
+        anchors.fill: parent
+        enabled: root.enabled
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: popup.visible ? popup.close() : root.openPopup()
+    }
+
+    Popup {
+        id: popup
+
+        parent: Overlay.overlay
+        modal: false
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         padding: 6
+        height: Math.min(optionsView.contentHeight + topPadding + bottomPadding, 268)
+
+        onOpened: {
+            root.updatePopupGeometry()
+            optionsView.positionViewAtIndex(root.highlightedIndex, ListView.Contain)
+        }
 
         background: Rectangle {
             radius: Theme.radiusMedium
@@ -117,13 +223,55 @@ ComboBox {
         }
 
         contentItem: ListView {
+            id: optionsView
+
             clip: true
-            implicitHeight: contentHeight
-            model: root.popup.visible ? root.delegateModel : null
+            implicitHeight: Math.min(contentHeight, 256)
+            model: root.optionCount()
             currentIndex: root.highlightedIndex
             spacing: 2
             boundsBehavior: Flickable.StopAtBounds
             interactive: contentHeight > height
+
+            delegate: Item {
+                id: optionDelegate
+
+                required property int index
+                readonly property bool selected: index === root.currentIndex
+                readonly property bool highlighted: index === root.highlightedIndex
+
+                width: optionsView.width
+                height: 36
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 8
+                    color: optionDelegate.highlighted
+                        ? Theme.accentSoft
+                        : (optionDelegate.selected ? Theme.popupItemFill : "transparent")
+                }
+
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 12
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.optionText(optionDelegate.index)
+                    color: Theme.textPrimary
+                    font.pixelSize: root.font.pixelSize
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onEntered: root.highlightedIndex = optionDelegate.index
+                    onClicked: root.activateOption(optionDelegate.index)
+                }
+            }
 
             ScrollIndicator.vertical: ScrollIndicator { }
         }

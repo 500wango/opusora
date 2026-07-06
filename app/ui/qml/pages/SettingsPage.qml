@@ -58,6 +58,7 @@ Item {
                     }
 
                     GlassComboBox {
+                        objectName: "settingsLanguageComboBox"
                         Layout.preferredWidth: 220
                         model: [
                             { label: "English", value: "en-US" },
@@ -92,6 +93,7 @@ Item {
                     }
 
                     GlassComboBox {
+                        objectName: "settingsThemeComboBox"
                         Layout.preferredWidth: 220
                         model: root.themeOptions
                         textRole: "label"
