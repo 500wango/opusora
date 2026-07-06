@@ -264,6 +264,30 @@ add_test(
     COMMAND ${CMAKE_COMMAND} -E env QT_QPA_PLATFORM=offscreen OPUSORA_TEST_DISABLE_MEDIA_KEYS=1 OPUSORA_GST_FAKE_AUDIO_SINK=1 XDG_CONFIG_HOME=/tmp/opusora-gapless-ctest-config XDG_DATA_HOME=/tmp/opusora-gapless-ctest-data $<TARGET_FILE:opusora> --gapless-smoke $<TARGET_FILE:opusora>
 )
 
+set(OPUSORA_SMOKE_TESTS
+    opusora_app_smoke
+    opusora_encoding_smoke
+    opusora_online_metadata_smoke
+    opusora_search_smoke
+    opusora_restore_smoke
+    opusora_recent_smoke
+    opusora_duplicates_smoke
+    opusora_playqueue_index_smoke
+    opusora_playqueue_identity_smoke
+    opusora_queue_token_smoke
+    opusora_playlist_bulk_smoke
+    opusora_playqueue_large_smoke
+    opusora_empty_playback_smoke
+    opusora_unrecognizable_playback_smoke
+    opusora_replaygain_smoke
+    opusora_gapless_smoke
+)
+
+set_tests_properties(${OPUSORA_SMOKE_TESTS}
+    PROPERTIES
+        ENVIRONMENT "QT_QUICK_BACKEND=software;QSG_RENDER_LOOP=basic;LIBGL_ALWAYS_SOFTWARE=1;OPUSORA_GST_FAKE_AUDIO_SINK=1"
+)
+
 install(TARGETS opusora
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

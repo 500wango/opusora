@@ -23,6 +23,11 @@ jobs:
   linux:
     name: Ubuntu Linux
     runs-on: ubuntu-24.04
+    env:
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      OPUSORA_GST_FAKE_AUDIO_SINK: "1"
+      QSG_RENDER_LOOP: basic
+      QT_QUICK_BACKEND: software
 
     steps:
       - name: Checkout
@@ -67,7 +72,45 @@ jobs:
         run: cmake --build build --parallel
 
       - name: Test
-        run: ctest --test-dir build --output-on-failure
+        shell: bash
+        run: |
+          set +e
+          ctest --test-dir build --output-on-failure 2>&1 | tee ctest.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+
+          {
+            echo "Qt plugin directory:"
+            qmake6 -query QT_INSTALL_PLUGINS 2>/dev/null || true
+            echo
+            echo "Qt platform plugins:"
+            plugin_dir="$(qmake6 -query QT_INSTALL_PLUGINS 2>/dev/null || true)"
+            if [ -n "$plugin_dir" ]; then
+              find "$plugin_dir/platforms" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort || true
+            fi
+            echo
+            echo "Opusora linked libraries:"
+            ldd build/opusora || true
+            echo
+            echo "Failed test details:"
+            ctest --test-dir build --rerun-failed -V 2>&1 || true
+            echo
+            echo "CTest output:"
+            tail -n 160 ctest.log || true
+          } > ci-test-diagnostics.log
+
+          message="$(python3 - <<'PY'
+from pathlib import Path
+
+data = Path("ci-test-diagnostics.log").read_text(errors="replace")[-7000:]
+data = data.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+print(data)
+PY
+)"
+          echo "::error title=Opusora smoke tests failed::$message"
+          exit "$status"
 
       - name: Package TGZ
         run: cpack --config build/CPackConfig.cmake -G TGZ
