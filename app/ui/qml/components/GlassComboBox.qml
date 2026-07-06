@@ -23,21 +23,25 @@ ComboBox {
         }
 
         width: root.width
-        height: 34
+        height: 36
+        leftPadding: 12
+        rightPadding: 12
         text: optionText
         highlighted: root.highlightedIndex === index
 
         background: Rectangle {
-            radius: 10
+            radius: 8
             color: itemDelegate.highlighted
                 ? Theme.accentSoft
-                : (itemDelegate.hovered ? Theme.controlFill : "transparent")
+                : (itemDelegate.hovered
+                    ? Theme.popupItemHover
+                    : (itemDelegate.index === root.currentIndex ? Theme.popupItemFill : "transparent"))
         }
 
         contentItem: Text {
             text: itemDelegate.text
             color: Theme.textPrimary
-            font.pixelSize: 13
+            font.pixelSize: root.font.pixelSize
             verticalAlignment: Text.AlignVCenter
             elide: Text.ElideRight
         }
@@ -91,15 +95,25 @@ ComboBox {
 
     popup: Popup {
         y: root.height + 6
+        z: 1000
         width: root.width
         implicitHeight: Math.min(contentItem.implicitHeight + topPadding + bottomPadding, 268)
         padding: 6
 
         background: Rectangle {
             radius: Theme.radiusMedium
-            color: Theme.elevated
+            color: Theme.popupFill
             border.color: Theme.glassBorder
             border.width: 1
+
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: 1
+                radius: Math.max(0, parent.radius - 1)
+                color: "transparent"
+                border.color: Theme.innerStroke
+                border.width: 1
+            }
         }
 
         contentItem: ListView {
@@ -108,6 +122,8 @@ ComboBox {
             model: root.popup.visible ? root.delegateModel : null
             currentIndex: root.highlightedIndex
             spacing: 2
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: contentHeight > height
 
             ScrollIndicator.vertical: ScrollIndicator { }
         }

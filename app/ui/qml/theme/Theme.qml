@@ -35,6 +35,9 @@ QtObject {
     readonly property color controlFill: mode === "dark" ? Qt.rgba(1.0, 1.0, 1.0, 0.07) : Qt.rgba(1.0, 1.0, 1.0, 0.50)
     readonly property color controlHover: mode === "dark" ? Qt.rgba(1.0, 1.0, 1.0, 0.13) : Qt.rgba(1.0, 1.0, 1.0, 0.84)
     readonly property color controlPressed: mode === "dark" ? Qt.rgba(1.0, 1.0, 1.0, 0.18) : Qt.rgba(0.08, 0.10, 0.13, 0.10)
+    readonly property color popupFill: mode === "dark" ? "#252936" : "#ffffff"
+    readonly property color popupItemFill: mode === "dark" ? Qt.rgba(1.0, 1.0, 1.0, 0.08) : Qt.rgba(0.08, 0.10, 0.13, 0.06)
+    readonly property color popupItemHover: mode === "dark" ? Qt.rgba(1.0, 1.0, 1.0, 0.12) : Qt.rgba(0.08, 0.10, 0.13, 0.09)
     readonly property color glassHighlight: mode === "dark" ? Qt.rgba(1.0, 1.0, 1.0, 0.08) : Qt.rgba(1.0, 1.0, 1.0, 0.90)
     readonly property color glassBorder: mode === "dark" ? Qt.rgba(1.0, 1.0, 1.0, 0.14) : Qt.rgba(1.0, 1.0, 1.0, 0.88)
     readonly property color innerStroke: mode === "dark" ? Qt.rgba(0.0, 0.0, 0.0, 0.34) : Qt.rgba(0.43, 0.48, 0.56, 0.18)
