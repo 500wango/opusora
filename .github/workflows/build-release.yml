@@ -1,0 +1,102 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Optional tag name to create/update a GitHub Release, for example v0.1.0"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    name: Ubuntu Linux
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            cmake \
+            dpkg-dev \
+            file \
+            gstreamer1.0-libav \
+            gstreamer1.0-plugins-bad \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            gstreamer1.0-plugins-ugly \
+            gstreamer1.0-tools \
+            libgstreamer-plugins-base1.0-dev \
+            libgstreamer1.0-dev \
+            libqt6sql6-sqlite \
+            ninja-build \
+            pkg-config \
+            qml6-module-qtquick \
+            qml6-module-qtquick-controls \
+            qml6-module-qtquick-layouts \
+            qml6-module-qtquick-window \
+            qt6-base-dev \
+            qt6-declarative-dev \
+            qt6-tools-dev \
+            qt6-tools-dev-tools
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package TGZ
+        run: cpack --config build/CPackConfig.cmake -G TGZ
+
+      - name: Package DEB
+        run: cpack --config build/CPackConfig.cmake -G DEB
+
+      - name: Smoke test packaged DEB
+        run: |
+          package="$(ls opusora_*_amd64.deb | head -n 1)"
+          temp_dir="$(mktemp -d)"
+          dpkg-deb -x "$package" "$temp_dir"
+          QT_QPA_PLATFORM=offscreen \
+          OPUSORA_TEST_DISABLE_MEDIA_KEYS=1 \
+          XDG_CONFIG_HOME="$RUNNER_TEMP/opusora-package-smoke-config" \
+          XDG_DATA_HOME="$RUNNER_TEMP/opusora-package-smoke-data" \
+            "$temp_dir/usr/bin/opusora" --app-smoke
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: opusora-linux-packages
+          if-no-files-found: error
+          path: |
+            Opusora-*-Linux.tar.gz
+            opusora_*_amd64.deb
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+          name: Opusora ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+          files: |
+            Opusora-*-Linux.tar.gz
+            opusora_*_amd64.deb
