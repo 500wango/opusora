@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Opusora
+Comment=Local music player for Linux
+Exec=opusora %U
+Icon=opusora
+Terminal=false
+Categories=AudioVideo;Audio;Music;Player;
+MimeType=audio/aac;audio/flac;audio/mpeg;audio/mp4;audio/ogg;audio/opus;audio/wav;audio/x-flac;audio/x-m4a;audio/x-wav;
+StartupNotify=true
+StartupWMClass=Opusora

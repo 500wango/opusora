@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>local.opusora.Opusora</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Opusora</name>
+  <summary>Local music player for Linux</summary>
+  <description>
+    <p>Opusora scans local music folders, organizes albums, artists, genres and playlists, and plays local audio through a Qt 6 interface.</p>
+  </description>
+  <launchable type="desktop-id">opusora.desktop</launchable>
+  <provides>
+    <binary>opusora</binary>
+  </provides>
+</component>
