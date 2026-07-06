@@ -15,8 +15,15 @@ if ! command -v linuxdeploy-x86_64.AppImage >/dev/null 2>&1; then
     exit 1
 fi
 
-linuxdeploy-x86_64.AppImage \
-    --appdir "${APPDIR}" \
-    --desktop-file "${ROOT_DIR}/packaging/linux/opusora.desktop" \
-    --icon-file "${ROOT_DIR}/packaging/linux/icons/hicolor/scalable/apps/opusora.svg" \
+LINUXDEPLOY_ARGS=(
+    --appdir "${APPDIR}"
+    --desktop-file "${ROOT_DIR}/packaging/linux/opusora.desktop"
+    --icon-file "${ROOT_DIR}/packaging/linux/icons/hicolor/scalable/apps/opusora.svg"
     --output appimage
+)
+
+if command -v linuxdeploy-plugin-qt-x86_64.AppImage >/dev/null 2>&1; then
+    LINUXDEPLOY_ARGS=(--plugin qt "${LINUXDEPLOY_ARGS[@]}")
+fi
+
+linuxdeploy-x86_64.AppImage "${LINUXDEPLOY_ARGS[@]}"

@@ -1,6 +1,8 @@
 build/
+build-appimage/
 cmake-build-*/
 _CPack_Packages/
+AppDir/
 
 01_Opusora_PRD_v1.1.md
 02_Opusora_Development_Tasks.md
@@ -16,7 +18,10 @@ Opusora_All_Documents.md
 *.sqlite
 *.sqlite3
 *.deb
+*.rpm
 *.tar.gz
+*.AppImage
+*.zsync
 
 .cache/
 .qt/

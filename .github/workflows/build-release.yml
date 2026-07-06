@@ -45,8 +45,10 @@ jobs:
             libgstreamer-plugins-base1.0-dev \
             libgstreamer1.0-dev \
             libqt6sql6-sqlite \
+            libfuse2t64 \
             ninja-build \
             pkg-config \
+            rpm \
             qml6-module-qtquick \
             qml6-module-qtquick-controls \
             qml6-module-qtquick-layouts \
@@ -54,7 +56,8 @@ jobs:
             qt6-base-dev \
             qt6-declarative-dev \
             qt6-tools-dev \
-            qt6-tools-dev-tools
+            qt6-tools-dev-tools \
+            wget
 
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -70,6 +73,26 @@ jobs:
 
       - name: Package DEB
         run: cpack --config build/CPackConfig.cmake -G DEB
+
+      - name: Package RPM
+        run: cpack --config build/CPackConfig.cmake -G RPM
+
+      - name: Install AppImage tooling
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          wget -qO "$HOME/.local/bin/linuxdeploy-x86_64.AppImage" \
+            https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -qO "$HOME/.local/bin/linuxdeploy-plugin-qt-x86_64.AppImage" \
+            https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x "$HOME/.local/bin/linuxdeploy-x86_64.AppImage" \
+            "$HOME/.local/bin/linuxdeploy-plugin-qt-x86_64.AppImage"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Package AppImage
+        run: |
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          export QMAKE=qmake6
+          scripts/build-appimage.sh
 
       - name: Smoke test packaged DEB
         run: |
@@ -90,6 +113,8 @@ jobs:
           path: |
             Opusora-*-Linux.tar.gz
             opusora_*_amd64.deb
+            *.rpm
+            *.AppImage
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
@@ -100,3 +125,5 @@ jobs:
           files: |
             Opusora-*-Linux.tar.gz
             opusora_*_amd64.deb
+            *.rpm
+            *.AppImage
