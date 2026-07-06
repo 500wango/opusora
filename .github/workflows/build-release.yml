@@ -134,15 +134,45 @@ jobs:
           scripts/build-appimage.sh
 
       - name: Smoke test packaged DEB
+        shell: bash
         run: |
-          package="$(ls opusora_*_amd64.deb | head -n 1)"
+          package="$(find . -maxdepth 1 -type f -name 'opusora_*_amd64.deb' | sort | head -n 1)"
+          if [ -z "$package" ]; then
+            echo "::error title=Packaged DEB smoke failed::No opusora_*_amd64.deb package found"
+            exit 1
+          fi
+
           temp_dir="$(mktemp -d)"
           dpkg-deb -x "$package" "$temp_dir"
+          multiarch="$(dpkg-architecture -qDEB_HOST_MULTIARCH)"
+          qml_import_path="$temp_dir/usr/lib/$multiarch/qt6/qml:$temp_dir/usr/lib/qt6/qml"
+
+          set +e
           QT_QPA_PLATFORM=offscreen \
+          QML2_IMPORT_PATH="$qml_import_path" \
+          QML_IMPORT_PATH="$qml_import_path" \
           OPUSORA_TEST_DISABLE_MEDIA_KEYS=1 \
           XDG_CONFIG_HOME="$RUNNER_TEMP/opusora-package-smoke-config" \
           XDG_DATA_HOME="$RUNNER_TEMP/opusora-package-smoke-data" \
-            "$temp_dir/usr/bin/opusora" --app-smoke
+            "$temp_dir/usr/bin/opusora" --app-smoke 2>&1 | tee package-smoke.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+
+          {
+            echo "Package: $package"
+            echo
+            echo "Extracted QML files:"
+            find "$temp_dir/usr/lib" -maxdepth 8 -path '*/qt6/qml/*' -type f 2>/dev/null | sort | head -n 120 || true
+            echo
+            echo "Packaged smoke output:"
+            cat package-smoke.log
+          } > package-smoke-diagnostics.log
+
+          message="$(python3 -c 'from pathlib import Path; data = Path("package-smoke-diagnostics.log").read_text(errors="replace")[-7000:]; print(data.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A"))')"
+          echo "::error title=Packaged DEB smoke failed::$message"
+          exit "$status"
 
       - name: Upload packages
         uses: actions/upload-artifact@v4
